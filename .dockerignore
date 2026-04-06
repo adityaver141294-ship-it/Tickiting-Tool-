@@ -1,0 +1,27 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Development tools
+.vscode
+.git
+.gitignore
+
+# Database files (managed via Docker volume)
+database.sqlite
+*.sqlite
+
+# Android / Capacitor build artifacts
+android
+ios
+www
+capacitor.config.json
+
+# Archives
+*.rar
+*.zip
+
+# Unused runtime files
+sw.js
+manifest.json
+*.rar

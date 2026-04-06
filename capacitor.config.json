@@ -1,0 +1,13 @@
+{
+  "appId": "com.svmastt.app",
+  "appName": "SVMS TT",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://api.svmastt.com",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

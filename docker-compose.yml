@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  svms-tt:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime        # Use only the lean runtime stage
+
+    image: ticketflow:latest
+    container_name: ticketflow-app
+
+    ports:
+      - "8080:3000"          # Access the app at http://localhost:8080
+
+    # ── Persistence ────────────────────────────────────────────
+    volumes:
+      - svms_data:/data      # SQLite database persisted across restarts
+      - /tmp:/tmp            # Writable /tmp for Node runtime (required with read-only FS)
+
+    # ── Environment (load from .env file — never hardcode secrets!) ──
+    env_file:
+      - .env                 # Create from .env.example before first run
+
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_PATH=/data/database.sqlite
+      # ALLOWED_ORIGINS is loaded from .env
+
+    # ── Reliability ────────────────────────────────────────────
+    restart: unless-stopped  # Auto-restart on crash (not on manual stop)
+
+    # ── Logging ────────────────────────────────────────────────
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"      # Rotate after 10 MB
+        max-file: "3"        # Keep last 3 log files
+
+    # ── Resource Limits ────────────────────────────────────────
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'        # Max 1 CPU core
+          memory: 512M       # Max 512MB RAM
+        reservations:
+          memory: 128M       # Guaranteed 128MB RAM
+
+    # ── Security Hardening ─────────────────────────────────────
+
+    # 1. Read-only Root Filesystem
+    #    Prevents any file injection or binary tampering inside the container.
+    read_only: true
+
+    # 2. Drop ALL Linux Capabilities
+    #    The app is just a Node web server — it needs zero system-level capabilities.
+    cap_drop:
+      - ALL
+
+    # 3. Prevent Privilege Escalation
+    #    Even if compromised, the process cannot sudo or elevate permissions.
+    security_opt:
+      - no-new-privileges:true
+
+    # 4. Run as unprivileged user (UID 1000 = 'node' user in the image)
+    user: "1000:1000"
+
+# ── Named Volumes ───────────────────────────────────────────────
+volumes:
+  svms_data:
+    driver: local

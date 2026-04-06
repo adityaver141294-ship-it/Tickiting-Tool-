@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TicketFlow — Login</title>
+  <meta name="description" content="TicketFlow — Modern ticket management system. Login as admin or user." />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#6366f1" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .login-glow {
+      position: fixed;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(99,102,241,0.12), transparent 70%);
+      top: -200px; left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+    .login-glow-2 {
+      position: fixed;
+      width: 400px; height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(139,92,246,0.08), transparent 70%);
+      bottom: -100px; right: -100px;
+      pointer-events: none;
+    }
+    .demo-creds {
+      background: rgba(99,102,241,0.08);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      font-size: 0.8rem;
+    }
+    .demo-creds-title { font-weight: 700; color: var(--accent-primary); margin-bottom: 6px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    .demo-cred-row { color: var(--text-muted); margin-bottom: 2px; }
+    .demo-cred-row span { color: var(--text-secondary); font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="login-glow"></div>
+  <div class="login-glow-2"></div>
+
+  <div class="login-page">
+    <div class="login-card fade-in">
+
+      <!-- Logo -->
+      <div class="login-logo">
+        <div class="login-logo-icon">🎫</div>
+        <div>
+          <div class="login-heading">TicketFlow</div>
+          <div class="login-subheading">Support & Issue Tracking System</div>
+        </div>
+      </div>
+
+      <!-- Role tabs -->
+      <div class="role-tabs" id="roleTabs">
+        <button class="role-tab active" id="tab-admin" onclick="setRole('admin')">🛡️ Admin</button>
+        <button class="role-tab" id="tab-user" onclick="setRole('user')">👤 User</button>
+      </div>
+
+      <!-- Demo credentials hint -->
+      <div class="demo-creds" id="demoCreds">
+        <div class="demo-creds-title">🔑 Demo Credentials</div>
+        <div id="demoUsernameContent">
+          <div class="demo-cred-row" id="demoUsername">Username: <span>System Admin</span></div>
+          <div class="demo-cred-row" id="demoPass">Password: <span>admin123</span></div>
+        </div>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="usernameInput">Username</label>
+          <input type="text" id="usernameInput" class="form-control" placeholder="Enter your username" autocomplete="username" required />
+          <div class="form-error" id="usernameError">Please enter your username.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="passwordInput">Password</label>
+          <input type="password" id="passwordInput" class="form-control" placeholder="••••••••" autocomplete="current-password" required />
+          <div class="form-error" id="passError">Password is required.</div>
+        </div>
+        <div class="form-error" id="loginError" style="font-size:0.85rem; margin-bottom:12px;"></div>
+        <button type="submit" class="btn btn-primary btn-lg w-full" id="loginBtn">
+          <span id="loginBtnText">Sign In</span>
+        </button>
+      </form>
+
+      <div class="divider"></div>
+      <p style="text-align:center; font-size:0.78rem; color:var(--text-muted);">
+        Powered by <strong style="color:var(--accent-primary);">TicketFlow v1.0</strong> &mdash; Supports up to 200 users
+      </p>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="app.js"></script>
+  <script>
+    let currentRole = 'admin';
+
+    // Redirect if already logged in
+    (function() {
+      const s = App.Session.get();
+      if (s) {
+        window.location.href = s.role === 'admin' ? 'admin.html' : 'user.html';
+      }
+    })();
+
+    function setRole(role) {
+      currentRole = role;
+      document.getElementById('tab-admin').classList.toggle('active', role === 'admin');
+      document.getElementById('tab-user').classList.toggle('active', role === 'user');
+      if (role === 'admin') {
+        document.getElementById('demoUsernameContent').innerHTML = `
+          <div class="demo-cred-row" id="demoUsername">Username: <span>System Admin</span></div>
+          <div class="demo-cred-row" id="demoPass">Password: <span>admin123</span></div>
+        `;
+      } else {
+        document.getElementById('demoUsernameContent').innerHTML = `
+          <div class="demo-cred-row" style="font-size: 0.8rem;">
+            Use the Full Name and Password provided by your Administrator to log in.
+          </div>
+        `;
+      }
+      document.getElementById('usernameInput').value = '';
+      document.getElementById('passwordInput').value = '';
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const username = document.getElementById('usernameInput').value.trim();
+      const pass = document.getElementById('passwordInput').value;
+      const errEl = document.getElementById('loginError');
+      errEl.style.display = 'none';
+      errEl.textContent = '';
+
+      if (!username) { showErr('usernameError'); return; }
+      if (!pass)     { showErr('passError'); return; }
+
+      const btn = document.getElementById('loginBtnText');
+      btn.textContent = 'Signing in…';
+
+      setTimeout(async () => {
+        const result = await App.Users.authenticate(username, pass);
+        if (!result.ok) {
+          errEl.textContent = result.msg;
+          errEl.style.display = 'block';
+          btn.textContent = 'Sign In';
+          App.toast(result.msg, 'error');
+          return;
+        }
+        if (result.user.role !== currentRole) {
+          errEl.textContent = `This account is a ${result.user.role}, not a ${currentRole}. Please select the correct role tab.`;
+          errEl.style.display = 'block';
+          btn.textContent = 'Sign In';
+          return;
+        }
+        App.Session.set(result.user);
+        App.toast(`Welcome back, ${result.user.name}! 🎉`, 'success');
+        setTimeout(() => {
+          window.location.href = result.user.role === 'admin' ? 'admin.html' : 'user.html';
+        }, 800);
+      }, 400);
+    });
+
+    function showErr(id) {
+      document.getElementById(id).classList.add('visible');
+      setTimeout(() => document.getElementById(id).classList.remove('visible'), 3000);
+    }
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.warn('Service Worker registration failed:', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
